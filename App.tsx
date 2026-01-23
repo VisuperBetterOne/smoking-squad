@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { INITIAL_USERS, STORAGE_KEY, PROFILES_KEY } from './constants';
-import { SmokeHistory, AIInsight, User, AppView } from './types';
+import { SmokeHistory, User, AppView, AIInsight } from './types';
 import UserCard from './components/UserCard';
 import StatsDashboard from './components/StatsDashboard';
-import AIPanel from './components/AIPanel';
 import ProfilePage from './components/ProfilePage';
+import AIPanel from './components/AIPanel';
 import { getAIHealthInsights } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -24,7 +24,8 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : INITIAL_USERS;
   });
 
-  const [aiInsight, setAiInsight] = useState<AIInsight | null>(null);
+  // AI Insights State
+  const [insight, setInsight] = useState<AIInsight | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -81,12 +82,12 @@ const App: React.FC = () => {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
   };
 
-  const fetchInsights = async () => {
+  const handleFetchAIInsights = useCallback(async () => {
     setLoadingAI(true);
     const result = await getAIHealthInsights(history);
-    setAiInsight(result);
+    setInsight(result);
     setLoadingAI(false);
-  };
+  }, [history]);
 
   const totalToday = Object.values(history[today] || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0), 0);
 
@@ -106,14 +107,18 @@ const App: React.FC = () => {
         ))}
       </div>
 
+      {/* AI Insights Section */}
+      <div className="mb-12">
+        <AIPanel 
+          insight={insight} 
+          loading={loadingAI} 
+          onRefresh={handleFetchAIInsights} 
+        />
+      </div>
+
       {/* Analytics Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <StatsDashboard history={history} users={users} />
-        </div>
-        <div className="lg:col-span-1">
-          <AIPanel insight={aiInsight} loading={loadingAI} onRefresh={fetchInsights} />
-        </div>
+      <div className="w-full">
+        <StatsDashboard history={history} users={users} />
       </div>
     </>
   );

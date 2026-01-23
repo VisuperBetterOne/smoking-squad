@@ -14,6 +14,7 @@ export interface SmokeHistory {
   [date: string]: DailyRecord;
 }
 
+// AIInsight defines the structure of the AI analysis returned by Gemini
 export interface AIInsight {
   summary: string;
   suggestion: string;

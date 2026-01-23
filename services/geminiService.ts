@@ -4,9 +4,10 @@ import { SmokeHistory, AIInsight } from "../types";
 // Corrected import from USERS to INITIAL_USERS
 import { INITIAL_USERS } from "../constants";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export async function getAIHealthInsights(history: SmokeHistory): Promise<AIInsight | null> {
+  // Always create a new GoogleGenAI instance right before making an API call to ensure it uses the current API key
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
   const recentDates = Object.keys(history).sort().slice(-7);
   const recentData = recentDates.map(date => ({
     date,
@@ -40,8 +41,10 @@ export async function getAIHealthInsights(history: SmokeHistory): Promise<AIInsi
       }
     });
 
-    if (response.text) {
-      return JSON.parse(response.text) as AIInsight;
+    // Directly access the .text property (not a method) from GenerateContentResponse
+    const text = response.text;
+    if (text) {
+      return JSON.parse(text.trim()) as AIInsight;
     }
     return null;
   } catch (error) {
