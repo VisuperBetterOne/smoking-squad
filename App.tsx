@@ -150,8 +150,99 @@ const App: React.FC = () => {
           </div>
         )}
         {/* GROUP 與 STATS 分頁代碼比照辦理 */}
-      </main>
-      <NavBar activeTab={activeTab} onTabChange={setActiveTab} />
+        {activeTab === TabType.GROUP && (
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
+            <h3 className="text-xl font-black text-white flex items-center gap-3">
+              <Trophy className="text-amber-500" /> 戒菸英雄榜
+            </h3>
+            <div className="space-y-3">
+              {groupRanking.map((member, index) => (
+                <div 
+                  key={member.id} 
+                  className={`flex items-center justify-between p-5 rounded-3xl border transition-all ${
+                    member.id === activeMemberId 
+                      ? 'bg-indigo-900/20 border-indigo-500/50 ring-1 ring-indigo-500/30' 
+                      : 'bg-zinc-900/40 border-zinc-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shadow-inner ${
+                      index === 0 ? 'bg-amber-500 text-amber-950' : 
+                      index === 1 ? 'bg-zinc-400 text-zinc-900' : 
+                      index === 2 ? 'bg-orange-600 text-orange-950' : 
+                      'bg-zinc-800 text-zinc-500'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-black text-white">{member.name}</p>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${
+                        member.todayCount <= 5 ? 'text-emerald-500' : 'text-zinc-600'
+                      }`}>
+                        {member.todayCount === 0 ? '王者姿態' : member.todayCount <= 5 ? '表現卓越' : '繼續努力'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-2xl font-black ${
+                      member.todayCount === 0 ? 'text-emerald-400' : 
+                      member.todayCount > 10 ? 'text-rose-500' : 'text-zinc-100'
+                    }`}>
+                      {member.todayCount}
+                    </p>
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase">根</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === TabType.STATS && (
+          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-white flex items-center gap-3">
+                <TrendingUp className="text-indigo-500" /> 近七日趨勢
+              </h3>
+            </div>
+
+            <div className="bg-zinc-900/50 p-6 rounded-[2rem] h-72 border border-zinc-800 shadow-2xl">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1f2937" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#4b5563', fontWeight: 'bold'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#4b5563', fontWeight: 'bold'}} />
+                  <Tooltip 
+                    cursor={{fill: '#111827'}}
+                    contentStyle={{backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid #27272a', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5)'}}
+                    itemStyle={{color: '#fff', fontWeight: 'bold'}}
+                  />
+                  <Bar dataKey="count" radius={[8, 8, 8, 8]} barSize={24}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.count > 10 ? '#ef4444' : '#6366f1'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-emerald-500/5 p-6 rounded-[2rem] border border-emerald-500/20 text-center">
+                <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest mb-1">本週最低</p>
+                <p className="text-3xl font-black text-emerald-400">
+                  {Math.min(...chartData.map(d => d.count))}
+                </p>
+              </div>
+              <div className="bg-indigo-500/5 p-6 rounded-[2rem] border border-indigo-500/20 text-center">
+                <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mb-1">本週平均</p>
+                <p className="text-3xl font-black text-indigo-400">
+                  {(chartData.reduce((acc, curr) => acc + curr.count, 0) / 7).toFixed(1)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>      <NavBar activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 };
