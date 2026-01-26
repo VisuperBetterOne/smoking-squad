@@ -151,7 +151,7 @@ const App: React.FC = () => {
             {/* 其他按鈕與統計圖表... */}
             <div className="flex space-x-6">
               <button onClick={() => updateCount(activeMemberId, -1)} className="bg-zinc-900 border border-zinc-800 text-zinc-400 p-5 rounded-3xl shadow-lg active:bg-zinc-800"><Minus size={28} /></button>
-              <button onClick={() => updateCount(activeMemberId, 5)} className="bg-zinc-900 border border-zinc-800 text-indigo-400 font-black px-10 py-5 rounded-3xl shadow-lg active:bg-zinc-800 text-lg">+5</button>
+              <button onClick={() => updateCount(activeMemberId, 2)} className="bg-zinc-900 border border-zinc-800 text-indigo-400 font-black px-10 py-5 rounded-3xl shadow-lg active:bg-zinc-800 text-lg">+2</button>
             </div>
 
                         <div className="w-full max-w-sm bg-zinc-900/50 border border-zinc-800 p-6 rounded-[2.5rem] flex items-center justify-between mt-8">
@@ -209,9 +209,9 @@ const App: React.FC = () => {
                     <div>
                       <p className="font-black text-white">{member.name}</p>
                       <p className={`text-[10px] font-bold uppercase tracking-wider ${
-                        member.todayCount <= 5 ? 'text-emerald-500' : 'text-zinc-600'
+                        member.todayCount <= 10 ? 'text-emerald-500' : 'text-zinc-600'
                       }`}>
-                        {member.todayCount === 0 ? '王者姿態' : member.todayCount <= 5 ? '表現卓越' : '繼續努力'}
+                        {member.todayCount === 0 ? '王者姿態' : member.todayCount <= 10 ? '表現卓越' : '繼續努力'}
                       </p>
                     </div>
                   </div>
