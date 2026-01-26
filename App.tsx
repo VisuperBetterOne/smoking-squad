@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { TabType, SmokeRecord, Member } from './types';
-import { INITIAL_MEMBERS } from './constants';
+import { INITIAL_MEMBERS,LAST_USER_STORAGE_KEY } from './constants';
 import MemberSelector from './components/MemberSelector';
 import NavBar from './components/NavBar';
 import { Plus, Minus, Trophy, Flame, TrendingUp } from 'lucide-react';
@@ -12,11 +12,17 @@ import { ref, onValue, set, update } from 'firebase/database';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>(TabType.HOME);
-  const [activeMemberId, setActiveMemberId] = useState<string>(INITIAL_MEMBERS[0].id);
+  const [activeMemberId, setActiveMemberId] = useState<string>(() => {
+    return localStorage.getItem(LAST_USER_STORAGE_KEY) || INITIAL_MEMBERS[0].id;
+  });
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [records, setRecords] = useState<SmokeRecord[]>([]);
 
   const today = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    localStorage.setItem(LAST_USER_STORAGE_KEY, activeMemberId);
+  }, [activeMemberId]);
 
   // --- 2. 替換 localStorage，改用 Firebase 即時監聽 ---
   useEffect(() => {
@@ -146,6 +152,32 @@ const App: React.FC = () => {
             <div className="flex space-x-6">
               <button onClick={() => updateCount(activeMemberId, -1)} className="bg-zinc-900 border border-zinc-800 text-zinc-400 p-5 rounded-3xl shadow-lg active:bg-zinc-800"><Minus size={28} /></button>
               <button onClick={() => updateCount(activeMemberId, 5)} className="bg-zinc-900 border border-zinc-800 text-indigo-400 font-black px-10 py-5 rounded-3xl shadow-lg active:bg-zinc-800 text-lg">+5</button>
+            </div>
+
+                        <div className="w-full max-w-sm bg-zinc-900/50 border border-zinc-800 p-6 rounded-[2.5rem] flex items-center justify-between mt-8">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-rose-500/10 rounded-2xl">
+                  <Flame size={24} className="text-rose-500" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">群組平均</p>
+                  <p className="text-lg font-black text-white">
+                    {(groupRanking.reduce((acc, curr) => acc + curr.todayCount, 0) / members.length).toFixed(1)}
+                  </p>
+                </div>
+              </div>
+              <div className="h-10 w-[1px] bg-zinc-800"></div>
+              <div className="flex items-center space-x-4 text-right">
+                <div className="text-right">
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">群組總計</p>
+                  <p className="text-lg font-black text-white">
+                    {groupRanking.reduce((acc, curr) => acc + curr.todayCount, 0)}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-500/10 rounded-2xl">
+                  <Trophy size={24} className="text-amber-500" />
+                </div>
+              </div>
             </div>
           </div>
         )}

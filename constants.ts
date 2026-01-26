@@ -11,3 +11,4 @@ export const INITIAL_MEMBERS: Member[] = [
 
 export const STORAGE_KEY = 'quit_track_5_data';
 export const MEMBERS_STORAGE_KEY = 'quit_track_5_members';
+export const LAST_USER_STORAGE_KEY = 'quit_track_5_last_user';
