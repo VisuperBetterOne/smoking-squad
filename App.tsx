@@ -90,22 +90,25 @@ const App: React.FC = () => {
     const record = records.find(r => r.memberId === memberId && r.date === today);
     return record ? record.count : 0;
   };
+const chartData = useMemo(() => {
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    // 根據當前本地日期往回推
+    d.setDate(d.getDate() - (6 - i)); 
+    
+    // 將 ISOString 改為本地日期格式 (YYYY-MM-DD)
+    return d.toLocaleDateString('sv-SE'); 
+  });
 
-  const chartData = useMemo(() => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
-      return d.toISOString().split('T')[0];
-    });
-
-    return last7Days.map(date => {
-      const record = records.find(r => r.memberId === activeMemberId && r.date === date);
-      return {
-        name: date.split('-')[2],
-        count: record ? record.count : 0
-      };
-    });
-  }, [records, activeMemberId]);
+  return last7Days.map(date => {
+    // 這裡的 records.find 會根據正確的本地日期去 Firebase 抓到的資料中比對
+    const record = records.find(r => r.memberId === activeMemberId && r.date === date);
+    return {
+      name: date.split('-')[2], // 只拿「日」來顯示在 X 軸
+      count: record ? record.count : 0
+    };
+  });
+}, [records, activeMemberId]);
 
   const groupRanking = useMemo(() => {
     return members.map(m => ({
