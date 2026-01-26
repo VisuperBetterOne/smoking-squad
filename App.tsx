@@ -18,8 +18,7 @@ const App: React.FC = () => {
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [records, setRecords] = useState<SmokeRecord[]>([]);
 
-  const today = new Date().toISOString().split('T')[0];
-
+  const today = new Date().toLocaleDateString('sv-SE');
   useEffect(() => {
     localStorage.setItem(LAST_USER_STORAGE_KEY, activeMemberId);
   }, [activeMemberId]);
