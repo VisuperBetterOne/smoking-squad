@@ -1,175 +1,269 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { INITIAL_USERS, STORAGE_KEY, PROFILES_KEY } from './constants';
-import { SmokeHistory, User, AppView, AIInsight } from './types';
-import UserCard from './components/UserCard';
-import StatsDashboard from './components/StatsDashboard';
-import ProfilePage from './components/ProfilePage';
-import AIPanel from './components/AIPanel';
-import { getAIHealthInsights } from './services/geminiService';
+import React, { useState, useEffect, useMemo } from 'react';
+import { TabType, SmokeRecord, Member } from './types';
+import { INITIAL_MEMBERS, STORAGE_KEY, MEMBERS_STORAGE_KEY } from './constants';
+import MemberSelector from './components/MemberSelector';
+import NavBar from './components/NavBar';
+import { Plus, Minus, Trophy, Flame, TrendingUp } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const App: React.FC = () => {
-  // Navigation State
-  const [view, setView] = useState<AppView>({ type: 'home' });
+  // State Initialization
+  const [activeTab, setActiveTab] = useState<TabType>(TabType.HOME);
+  const [activeMemberId, setActiveMemberId] = useState<string>(INITIAL_MEMBERS[0].id);
+  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
+  const [records, setRecords] = useState<SmokeRecord[]>([]);
 
-  // History State
-  const [history, setHistory] = useState<SmokeHistory>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  // Users State (mutable profiles)
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem(PROFILES_KEY);
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
-
-  // AI Insights State
-  const [insight, setInsight] = useState<AIInsight | null>(null);
-  const [loadingAI, setLoadingAI] = useState(false);
-
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-
-  // Auto-initialize today's record if empty
+  // Load persistence
   useEffect(() => {
-    if (!history[today]) {
-      setHistory(prev => ({
-        ...prev,
-        [today]: users.reduce((acc, user) => ({ ...acc, [user.id]: 0 }), {})
-      }));
+    const savedRecords = localStorage.getItem(STORAGE_KEY);
+    const savedMembers = localStorage.getItem(MEMBERS_STORAGE_KEY);
+    
+    if (savedRecords) {
+      try {
+        setRecords(JSON.parse(savedRecords));
+      } catch (e) { console.error(e); }
     }
-  }, [today, history, users]);
+    
+    if (savedMembers) {
+      try {
+        setMembers(JSON.parse(savedMembers));
+      } catch (e) { console.error(e); }
+    }
+  }, []);
 
-  // Persist history to local storage
+  // Save persistence
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-  }, [history]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }, [records]);
 
-  // Persist profiles to local storage
   useEffect(() => {
-    localStorage.setItem(PROFILES_KEY, JSON.stringify(users));
-  }, [users]);
+    localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(members));
+  }, [members]);
 
-  const handleIncrement = useCallback((userId: string) => {
-    setHistory(prev => {
-      const currentDayRecords = prev[today] || {};
-      return {
-        ...prev,
-        [today]: {
-          ...currentDayRecords,
-          [userId]: (currentDayRecords[userId] || 0) + 1
-        }
-      };
-    });
-  }, [today]);
+  const activeMember = useMemo(() => 
+    members.find(m => m.id === activeMemberId) || members[0], 
+  [activeMemberId, members]);
 
-  const handleDecrement = useCallback((userId: string) => {
-    setHistory(prev => {
-      const currentDayRecords = prev[today] || {};
-      const currentCount = currentDayRecords[userId] || 0;
-      if (currentCount <= 0) return prev;
-      return {
-        ...prev,
-        [today]: {
-          ...currentDayRecords,
-          [userId]: currentCount - 1
-        }
-      };
-    });
-  }, [today]);
+  const today = new Date().toISOString().split('T')[0];
 
-  const handleUpdateUser = (userId: string, updates: Partial<User>) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+  const getTodayCount = (memberId: string) => {
+    const record = records.find(r => r.memberId === memberId && r.date === today);
+    return record ? record.count : 0;
   };
 
-  const handleFetchAIInsights = useCallback(async () => {
-    setLoadingAI(true);
-    const result = await getAIHealthInsights(history);
-    setInsight(result);
-    setLoadingAI(false);
-  }, [history]);
-
-  const totalToday = Object.values(history[today] || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0), 0);
-
-  const renderHome = () => (
-    <>
-      {/* Main Recording Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
-        {users.map(user => (
-          <UserCard
-            key={user.id}
-            user={user}
-            count={history[today]?.[user.id] || 0}
-            onIncrement={handleIncrement}
-            onDecrement={handleDecrement}
-            onViewProfile={(id) => setView({ type: 'profile', userId: id })}
-          />
-        ))}
-      </div>
-
-      {/* AI Insights Section */}
-      <div className="mb-12">
-        <AIPanel 
-          insight={insight} 
-          loading={loadingAI} 
-          onRefresh={handleFetchAIInsights} 
-        />
-      </div>
-
-      {/* Analytics Section */}
-      <div className="w-full">
-        <StatsDashboard history={history} users={users} />
-      </div>
-    </>
-  );
-
-  const renderProfile = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) {
-      setView({ type: 'home' });
-      return null;
-    }
-    return (
-      <ProfilePage 
-        user={user} 
-        history={history} 
-        onBack={() => setView({ type: 'home' })} 
-        onUpdateUser={handleUpdateUser}
-      />
-    );
+  const updateCount = (memberId: string, delta: number) => {
+    setRecords(prev => {
+      const existingIndex = prev.findIndex(r => r.memberId === memberId && r.date === today);
+      if (existingIndex > -1) {
+        const newRecords = [...prev];
+        const newCount = Math.max(0, newRecords[existingIndex].count + delta);
+        newRecords[existingIndex] = { ...newRecords[existingIndex], count: newCount };
+        return newRecords;
+      } else {
+        return [...prev, { memberId, date: today, count: Math.max(0, delta) }];
+      }
+    });
   };
+
+  const handleUpdateName = (id: string, newName: string) => {
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, name: newName } : m));
+  };
+
+  // Statistics Calculation
+  const chartData = useMemo(() => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    return last7Days.map(date => {
+      const record = records.find(r => r.memberId === activeMemberId && r.date === date);
+      return {
+        name: date.split('-')[2], // Day only
+        count: record ? record.count : 0
+      };
+    });
+  }, [records, activeMemberId]);
+
+  const groupRanking = useMemo(() => {
+    return members.map(m => ({
+      ...m,
+      todayCount: getTodayCount(m.id)
+    })).sort((a, b) => a.todayCount - b.todayCount);
+  }, [records, members]);
 
   return (
-    <div className="min-h-screen bg-slate-950 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <header className="mb-12 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div 
-            className="cursor-pointer"
-            onClick={() => setView({ type: 'home' })}
-          >
-            <h1 className="text-4xl font-black mb-2 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              QuitTogether
-            </h1>
-            <p className="text-slate-400 font-medium">
-              五人小組每日抽菸紀錄 · 共同邁向健康
-            </p>
-          </div>
-          {view.type === 'home' && (
-            <div className="glass-card px-8 py-4 rounded-2xl text-center">
-              <span className="block text-slate-500 text-xs uppercase tracking-widest mb-1">小組今日總計</span>
-              <span className="text-3xl font-bold text-white">{totalToday} 支</span>
+    <div className="min-h-screen bg-black text-zinc-100 pb-24 flex flex-col font-sans">
+      <MemberSelector 
+        members={members} 
+        activeMemberId={activeMemberId} 
+        onSelect={setActiveMemberId}
+        onUpdateName={handleUpdateName}
+      />
+
+      <main className="flex-1 p-5">
+        {activeTab === TabType.HOME && (
+          <div className="flex flex-col items-center justify-center space-y-12 mt-8 animate-in fade-in duration-500">
+            <div className="text-center">
+              <h2 className="text-zinc-500 text-sm font-bold tracking-widest uppercase">今日攝取紀錄</h2>
+              <div className="text-8xl font-black text-white mt-4 drop-shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+                {getTodayCount(activeMemberId)}
+              </div>
+              <p className="text-zinc-500 text-xs mt-2 uppercase tracking-tighter">Cigarettes Today</p>
             </div>
-          )}
-        </header>
 
-        {view.type === 'home' ? renderHome() : renderProfile(view.userId)}
+            <div className="relative w-56 h-56 flex items-center justify-center">
+              <div className={`absolute inset-0 rounded-full border-[10px] border-zinc-900 transition-colors ${
+                getTodayCount(activeMemberId) > 10 ? 'border-rose-900/30' : 'border-indigo-900/30'
+              }`}></div>
+              <button
+                onClick={() => updateCount(activeMemberId, 1)}
+                className="z-10 bg-indigo-600 active:bg-indigo-700 text-white w-36 h-36 rounded-full shadow-[0_0_40px_rgba(79,70,229,0.4)] flex items-center justify-center transform active:scale-90 transition-all border-4 border-indigo-400/20"
+              >
+                <Plus size={56} strokeWidth={3} />
+              </button>
+            </div>
 
-        {/* Footer */}
-        <footer className="mt-16 text-center text-slate-600 text-sm pb-8">
-          <p>© 2024 QuitTogether · 戒菸是為了更長久的相聚</p>
-        </footer>
-      </div>
+            <div className="flex space-x-6">
+              <button
+                onClick={() => updateCount(activeMemberId, -1)}
+                className="bg-zinc-900 border border-zinc-800 text-zinc-400 p-5 rounded-3xl shadow-lg active:bg-zinc-800"
+              >
+                <Minus size={28} />
+              </button>
+              <button
+                onClick={() => updateCount(activeMemberId, 5)}
+                className="bg-zinc-900 border border-zinc-800 text-indigo-400 font-black px-10 py-5 rounded-3xl shadow-lg active:bg-zinc-800 text-lg"
+              >
+                +5
+              </button>
+            </div>
+
+            <div className="w-full max-w-sm bg-zinc-900/50 border border-zinc-800 p-6 rounded-[2.5rem] flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-rose-500/10 rounded-2xl">
+                  <Flame size={24} className="text-rose-500" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">群組平均</p>
+                  <p className="text-lg font-black text-white">
+                    {(groupRanking.reduce((acc, curr) => acc + curr.todayCount, 0) / members.length).toFixed(1)}
+                  </p>
+                </div>
+              </div>
+              <div className="h-10 w-[1px] bg-zinc-800"></div>
+              <div className="flex items-center space-x-4 text-right">
+                <div className="text-right">
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">群組總計</p>
+                  <p className="text-lg font-black text-white">
+                    {groupRanking.reduce((acc, curr) => acc + curr.todayCount, 0)}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-500/10 rounded-2xl">
+                  <Trophy size={24} className="text-amber-500" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === TabType.GROUP && (
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
+            <h3 className="text-xl font-black text-white flex items-center gap-3">
+              <Trophy className="text-amber-500" /> 戒菸英雄榜
+            </h3>
+            <div className="space-y-3">
+              {groupRanking.map((member, index) => (
+                <div 
+                  key={member.id} 
+                  className={`flex items-center justify-between p-5 rounded-3xl border transition-all ${
+                    member.id === activeMemberId 
+                      ? 'bg-indigo-900/20 border-indigo-500/50 ring-1 ring-indigo-500/30' 
+                      : 'bg-zinc-900/40 border-zinc-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shadow-inner ${
+                      index === 0 ? 'bg-amber-500 text-amber-950' : 
+                      index === 1 ? 'bg-zinc-400 text-zinc-900' : 
+                      index === 2 ? 'bg-orange-600 text-orange-950' : 
+                      'bg-zinc-800 text-zinc-500'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-black text-white">{member.name}</p>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${
+                        member.todayCount <= 5 ? 'text-emerald-500' : 'text-zinc-600'
+                      }`}>
+                        {member.todayCount === 0 ? '王者姿態' : member.todayCount <= 5 ? '表現卓越' : '繼續努力'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-2xl font-black ${
+                      member.todayCount === 0 ? 'text-emerald-400' : 
+                      member.todayCount > 10 ? 'text-rose-500' : 'text-zinc-100'
+                    }`}>
+                      {member.todayCount}
+                    </p>
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase">根</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === TabType.STATS && (
+          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-white flex items-center gap-3">
+                <TrendingUp className="text-indigo-500" /> 近七日趨勢
+              </h3>
+            </div>
+
+            <div className="bg-zinc-900/50 p-6 rounded-[2rem] h-72 border border-zinc-800 shadow-2xl">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1f2937" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#4b5563', fontWeight: 'bold'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#4b5563', fontWeight: 'bold'}} />
+                  <Tooltip 
+                    cursor={{fill: '#111827'}}
+                    contentStyle={{backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid #27272a', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5)'}}
+                    itemStyle={{color: '#fff', fontWeight: 'bold'}}
+                  />
+                  <Bar dataKey="count" radius={[8, 8, 8, 8]} barSize={24}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.count > 10 ? '#ef4444' : '#6366f1'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-emerald-500/5 p-6 rounded-[2rem] border border-emerald-500/20 text-center">
+                <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest mb-1">本週最低</p>
+                <p className="text-3xl font-black text-emerald-400">
+                  {Math.min(...chartData.map(d => d.count))}
+                </p>
+              </div>
+              <div className="bg-indigo-500/5 p-6 rounded-[2rem] border border-indigo-500/20 text-center">
+                <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mb-1">本週平均</p>
+                <p className="text-3xl font-black text-indigo-400">
+                  {(chartData.reduce((acc, curr) => acc + curr.count, 0) / 7).toFixed(1)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <NavBar activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 {
-  "name": "quittogether",
+  "name": "quittrack-5---戒菸進度追蹤",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.3",
     "react": "^19.2.3",
-    "recharts": "^3.7.0",
-    "@google/genai": "^1.38.0"
+    "react-dom": "^19.2.3",
+    "@google/genai": "^1.38.0",
+    "lucide-react": "^0.563.0",
+    "recharts": "^3.7.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

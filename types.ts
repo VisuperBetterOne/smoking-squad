@@ -1,24 +1,23 @@
 
-export interface User {
+export interface Member {
   id: string;
   name: string;
-  avatar: string;
-  color: string;
 }
 
-export interface DailyRecord {
-  [userId: string]: number;
+export interface SmokeRecord {
+  memberId: string;
+  date: string; // YYYY-MM-DD
+  count: number;
 }
 
-export interface SmokeHistory {
-  [date: string]: DailyRecord;
+export interface AppState {
+  members: Member[];
+  records: SmokeRecord[];
+  activeMemberId: string;
 }
 
-// AIInsight defines the structure of the AI analysis returned by Gemini
-export interface AIInsight {
-  summary: string;
-  suggestion: string;
-  motivationalQuote: string;
+export enum TabType {
+  HOME = 'home',
+  GROUP = 'group',
+  STATS = 'stats'
 }
-
-export type AppView = { type: 'home' } | { type: 'profile'; userId: string };
