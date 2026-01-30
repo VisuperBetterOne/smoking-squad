@@ -241,7 +241,6 @@ const chartData = useMemo(() => {
                           </span>
                         )}
                       </div>
-                      <p className="font-black text-white">{member.name}</p>
                       <p className={`text-[10px] font-bold uppercase tracking-wider ${
                         member.todayCount <= 10 ? 'text-emerald-500' : 'text-zinc-600'
                       }`}>
