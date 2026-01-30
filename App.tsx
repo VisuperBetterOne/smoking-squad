@@ -19,6 +19,7 @@ const App: React.FC = () => {
   const [records, setRecords] = useState<SmokeRecord[]>([]);
 
   const today = new Date().toLocaleDateString('sv-SE');
+  const currentMonth = today.substring(0, 7); // YYYY-MM
   useEffect(() => {
     localStorage.setItem(LAST_USER_STORAGE_KEY, activeMemberId);
   }, [activeMemberId]);
@@ -81,6 +82,28 @@ const App: React.FC = () => {
     update(ref(db, `members/${id}`), { name: newName });
   };
 
+  // 計算本月抽菸室主任 (當月累計最高者)
+  const smokingDirectorId = useMemo(() => {
+    const monthStats: Record<string, number> = {};
+    records.forEach(r => {
+      if (r.date.startsWith(currentMonth)) {
+        monthStats[r.memberId] = (monthStats[r.memberId] || 0) + r.count;
+      }
+    });
+
+    let maxCount = -1;
+    let directorId = '';
+    
+    Object.entries(monthStats).forEach(([id, count]) => {
+      if (count > maxCount && count > 0) {
+        maxCount = count;
+        directorId = id;
+      }
+    });
+    
+    return directorId;
+  }, [records, currentMonth]);
+  
   // --- 以下計算邏輯維持不變 ---
   const activeMember = useMemo(() => 
     members.find(m => m.id === activeMemberId) || members[0], 
@@ -123,6 +146,7 @@ const chartData = useMemo(() => {
       <MemberSelector 
         members={members} 
         activeMemberId={activeMemberId} 
+        smokingDirectorId={smokingDirectorId}
         onSelect={setActiveMemberId}
         onUpdateName={handleUpdateName}
       />
