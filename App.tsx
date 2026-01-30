@@ -3,7 +3,7 @@ import { TabType, SmokeRecord, Member } from './types';
 import { INITIAL_MEMBERS,LAST_USER_STORAGE_KEY } from './constants';
 import MemberSelector from './components/MemberSelector';
 import NavBar from './components/NavBar';
-import { Plus, Minus, Trophy, Flame, TrendingUp } from 'lucide-react';
+import { Plus, Minus, Trophy, Flame, TrendingUp , Crown} from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 // --- 1. 引入 Firebase 實例與方法 ---
@@ -19,6 +19,7 @@ const App: React.FC = () => {
   const [records, setRecords] = useState<SmokeRecord[]>([]);
 
   const today = new Date().toLocaleDateString('sv-SE');
+  const currentMonth = today.substring(0, 7); // YYYY-MM
   useEffect(() => {
     localStorage.setItem(LAST_USER_STORAGE_KEY, activeMemberId);
   }, [activeMemberId]);
@@ -81,6 +82,28 @@ const App: React.FC = () => {
     update(ref(db, `members/${id}`), { name: newName });
   };
 
+  // 計算本月抽菸室主任 (當月累計最高者)
+  const smokingDirectorId = useMemo(() => {
+    const monthStats: Record<string, number> = {};
+    records.forEach(r => {
+      if (r.date.startsWith(currentMonth)) {
+        monthStats[r.memberId] = (monthStats[r.memberId] || 0) + r.count;
+      }
+    });
+
+    let maxCount = -1;
+    let directorId = '';
+    
+    Object.entries(monthStats).forEach(([id, count]) => {
+      if (count > maxCount && count > 0) {
+        maxCount = count;
+        directorId = id;
+      }
+    });
+    
+    return directorId;
+  }, [records, currentMonth]);
+  
   // --- 以下計算邏輯維持不變 ---
   const activeMember = useMemo(() => 
     members.find(m => m.id === activeMemberId) || members[0], 
@@ -123,6 +146,7 @@ const chartData = useMemo(() => {
       <MemberSelector 
         members={members} 
         activeMemberId={activeMemberId} 
+        smokingDirectorId={smokingDirectorId}
         onSelect={setActiveMemberId}
         onUpdateName={handleUpdateName}
       />
@@ -209,6 +233,14 @@ const chartData = useMemo(() => {
                       {index + 1}
                     </div>
                     <div>
+                        <div className="flex items-center gap-2">
+                        <p className="font-black text-white">{member.name}</p>
+                        {member.id === smokingDirectorId && (
+                          <span className="flex items-center gap-1 bg-rose-500/20 text-rose-500 text-[9px] font-black px-2 py-0.5 rounded-full border border-rose-500/30 animate-pulse">
+                            <Crown size={10} /> 吸菸室主任
+                          </span>
+                        )}
+                      </div>
                       <p className="font-black text-white">{member.name}</p>
                       <p className={`text-[10px] font-bold uppercase tracking-wider ${
                         member.todayCount <= 10 ? 'text-emerald-500' : 'text-zinc-600'
